@@ -5,6 +5,7 @@ import { Id } from "../../../../convex/_generated/dataModel"
 import { Preloaded, usePreloadedQuery } from "convex/react"
 import { useEffect, useRef } from "react"
 import { api } from "../../../../convex/_generated/api";
+import { Check, CheckCheck } from "lucide-react";
 
 
 interface Message {
@@ -16,14 +17,19 @@ interface Message {
     time: string;
     type: "text" | "image" | "video" | "audio" | "file";
     mediaUrl?: string;
+    isMyMessage: boolean;
+    isDelivered: boolean;
+    isRead: boolean;
 }
 
 export default function ChatList({
     userId,
-    preloadedMessages
+    preloadedMessages,
+    preloadedConversationInfo
 }: {
     userId: string,
     preloadedMessages: Preloaded<typeof api.chats.getMessages>
+    preloadedConversationInfo: Preloaded<typeof api.chats.getConversationInfo>
 }) {
 
     const messages = usePreloadedQuery(preloadedMessages)
@@ -81,9 +87,17 @@ export default function ChatList({
                                     <p className="text-sm dark:text-white break-words whitespace-pre-wrap">{message.content}</p>
                                 )}
 
-                                <p className="text-right text-xs text-muted-foreground mt-1">
-                                    {message.time}
-                                </p>
+                                <div className="flex items-center justify-end mt-1 gap-1">
+                                    <p className="text-xs text-muted-foreground">
+                                        {message.time}
+                                    </p>
+                                    {isMyMessage && (
+                                        <ReadStatusIcon
+                                            isDelivered={message.isDelivered}
+                                            isRead={message.isRead}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )
@@ -94,3 +108,30 @@ export default function ChatList({
         </div>
     )
 }
+
+const ReadStatusIcon = ({ isDelivered, isRead }: { isDelivered: boolean; isRead: boolean }) => {
+    if (!isDelivered) {
+        // Message en cours d'envoi
+        return (
+            <div className="inline-flex ml-1">
+                <Check className="w-3 h-3 text-gray-500" strokeWidth={2.5} />
+            </div>
+        );
+    }
+
+    if (isRead) {
+        // Deux chevrons bleus (message lu)
+        return (
+            <div className="inline-flex ml-1">
+                <CheckCheck className="w-3 h-3 text-blue-400" strokeWidth={2.5} />
+            </div>
+        );
+    } else {
+        // Deux chevrons gris (message livré mais non lu)
+        return (
+            <div className="inline-flex ml-1">
+                <CheckCheck className="w-3 h-3 text-gray-400" strokeWidth={2.5} />
+            </div>
+        );
+    }
+};

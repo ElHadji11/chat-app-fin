@@ -95,10 +95,19 @@ export const sendMessage = mutation({
         const conversation = await ctx.db.get(args.conversationId);
         if (!conversation) throw new Error("Conversation not found");
 
+        const now = Date.now();
+        if (conversation.isDraft) {
+            await ctx.db.patch(args.conversationId, {
+                isDraft: false,
+                updatedAt: now,
+                deletedBy: [],
+            });
+        }
+
         await ctx.db.patch(args.conversationId, {
             lastMessageId: messageId,
             deletedBy: [],
-            updatedAt: Date.now(),
+            // updatedAt: now,
         });
 
         return messageId;
@@ -141,6 +150,19 @@ export const getMessages = query({
 
         if (!user) throw new Error("User not found");
 
+
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) throw new Error("Conversation not found");
+
+        if (conversation.isDraft) {
+            return [];
+        }
+
+        const otherParticipantId =
+            conversation.participantOne === user._id
+                ? conversation.participantTwo
+                : conversation.participantOne;
+
         const allMessages = await ctx.db
             .query("messages")
             .filter((q) => q.eq(q.field("conversationId"), args.conversationId))
@@ -155,6 +177,8 @@ export const getMessages = query({
         return await Promise.all(
             visibleMessages.map(async (msg) => {
                 const sender = await ctx.db.get(msg.senderId);
+                const readByArray = msg.readBy || [];
+
                 return {
                     id: msg._id,
                     sender_userId: sender?.clerkId,
@@ -164,6 +188,9 @@ export const getMessages = query({
                     isSent: true,
                     type: msg.type,
                     mediaUrl: msg.mediaUrl,
+                    isMyMessage: msg.senderId === user._id,
+                    isDelivered: true,
+                    isRead: readByArray.includes(otherParticipantId), //
                 };
             })
         );
@@ -193,12 +220,15 @@ export const getConversation = query({
                     q.eq(q.field("participantTwo"), user._id)
                 ),
             )
+
             .collect();
 
         const filteredConversations = conversations
             .filter((conv: Doc<"conversations">) => {
                 const deletedByArray = conv.deletedBy || [];
-                return !deletedByArray.includes(user._id);
+                const isDraft = conv.isDraft || false;
+                const isDeleted = deletedByArray.includes(user._id);
+                return !isDeleted && !isDraft;
             });
 
         const conversationsWithDetails = await Promise.all(
@@ -221,7 +251,7 @@ export const getConversation = query({
                     return !deletedByArray.includes(user._id);
                 });
 
-                const lastVisibleMessage = visibleMessages[0]; // Le plus récent
+                const lastVisibleMessage = visibleMessages[0]; // Le plus récent                
 
                 // Compter les messages non lus
                 const unreadCount = visibleMessages.filter(msg => {
@@ -231,31 +261,38 @@ export const getConversation = query({
                     return isFromOther && isUnread;
                 }).length;
 
+                let isLastMessageRead = false;
+                if (lastVisibleMessage && lastVisibleMessage.senderId === user._id) {
+                    const readByArray = lastVisibleMessage.readBy || [];
+                    isLastMessageRead = readByArray.includes(otherParticipantId);
+                }
+
+                const sortTimestamp = lastVisibleMessage
+                    ? lastVisibleMessage._creationTime
+                    : conv._creationTime;
+
                 return {
                     id: conv._id,
                     name: otherUser?.name ?? "Unknown",
                     chatImage: otherUser?.image,
                     lastMessage: lastVisibleMessage?.content ?? "",
-                    time: formatChatTime(new Date(conv.updatedAt)),
+                    time: formatChatTime(new Date(sortTimestamp)),
                     unread: unreadCount,
                     type: lastVisibleMessage?.type,
                     isLastMessageFromMe: lastVisibleMessage?.senderId === user._id,
+                    sortTimestamp,
+                    isLastMessageRead: isLastMessageRead
                 };
             })
         );
 
         return conversationsWithDetails.sort((a: any, b: any) => {
-            if (a.unread > 0 && b.unread === 0) return -1;
-            if (a.unread === 0 && b.unread > 0) return 1;
-
-            const aTime = new Date(a.time).getTime() || 0;
-            const bTime = new Date(b.time).getTime() || 0;
-            return bTime - aTime;
+            return b.sortTimestamp - a.sortTimestamp;
         });
     },
 });
 
-// delete should work only in one side participant can delete the conversation and not both
+//delete
 export const deleteConversation = mutation({
     args: {
         userId: v.string(),
@@ -361,6 +398,107 @@ export const markMessagesAsRead = mutation({
         await Promise.all(updates);
 
         return { success: true, updatedMessages: updates.length };
+    },
+});
+
+//for drafts 
+export const createDraftConversation = mutation({
+    args: {
+        participantUserId: v.string(),
+        currentUserId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("clerkId"), args.currentUserId))
+            .first();
+
+        const otherUser = await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("clerkId"), args.participantUserId))
+            .first();
+
+        if (!currentUser || !otherUser) {
+            throw new Error("User not found");
+        }
+
+        // Vérifier s'il existe déjà une conversation (draft ou réelle)
+        const existingConversation = await ctx.db
+            .query("conversations")
+            .filter((q) =>
+                q.or(
+                    q.and(
+                        q.eq(q.field("participantOne"), currentUser._id),
+                        q.eq(q.field("participantTwo"), otherUser._id)
+                    ),
+                    q.and(
+                        q.eq(q.field("participantOne"), otherUser._id),
+                        q.eq(q.field("participantTwo"), currentUser._id)
+                    )
+                )
+            )
+            .first();
+
+        if (existingConversation) {
+            // Si c'est un draft, le "réactiver" pour cet utilisateur
+            if (existingConversation.isDraft) {
+                const deletedByArray = existingConversation.deletedBy || [];
+                const updatedDeletedBy = deletedByArray.filter(id => id !== currentUser._id);
+
+                await ctx.db.patch(existingConversation._id, {
+                    deletedBy: updatedDeletedBy,
+                    updatedAt: Date.now(),
+                });
+            }
+            return existingConversation._id;
+        }
+
+        // Créer une nouvelle conversation brouillon
+        const conversationId = await ctx.db.insert("conversations", {
+            participantOne: currentUser._id,
+            participantTwo: otherUser._id,
+            updatedAt: Date.now(),
+            isDraft: true, // ✅ Marquer comme brouillon
+        });
+
+        return conversationId;
+    },
+});
+
+export const getConversationInfo = query({
+    args: {
+        conversationId: v.id("conversations"),
+        userId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("clerkId"), args.userId))
+            .first();
+
+        if (!user) throw new Error("User not found");
+
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) throw new Error("Conversation not found");
+
+        // Vérifier que l'utilisateur fait partie de la conversation
+        if (conversation.participantOne !== user._id && conversation.participantTwo !== user._id) {
+            throw new Error("Unauthorized");
+        }
+
+        const otherParticipantId =
+            conversation.participantOne === user._id
+                ? conversation.participantTwo
+                : conversation.participantOne;
+
+        const otherUser = await ctx.db.get(otherParticipantId);
+
+        return {
+            id: conversation._id,
+            name: otherUser?.name ?? "Unknown",
+            image: otherUser?.image,
+            isDraft: conversation.isDraft || false,
+        };
     },
 });
 

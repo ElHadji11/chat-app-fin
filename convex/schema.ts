@@ -16,6 +16,7 @@ export default defineSchema({
         updatedAt: v.number(),
         lastMessageId: v.optional(v.id("messages")),
         deletedBy: v.optional(v.array(v.id("users"))),
+        isDraft: v.optional(v.boolean()),
     })
         .index("by_participants", ["participantOne", "participantTwo"])
         .index("by_participantOne", ["participantOne"])

@@ -25,7 +25,8 @@ export default function SearchComponent({ onSidebar }: { onSidebar: boolean }) {
     const [isPending, startTransition] = useTransition()
     const router = useRouter()
 
-    const createConversation = useMutation(api.chats.createOrGetConversation)
+    // const createConversation = useMutation(api.chats.createOrGetConversation)
+    const createDraft = useMutation(api.chats.createDraftConversation)
 
     const debouncedSearch = useCallback(
         // Debounce function that delays executing the search
@@ -52,7 +53,7 @@ export default function SearchComponent({ onSidebar }: { onSidebar: boolean }) {
 
     const handleStartChat = async (selectedUserId: string) => {
         try {
-            const conversationId = await createConversation({
+            const conversationId = await createDraft({
                 participantUserId: selectedUserId,
                 currentUserId: userId!
             })

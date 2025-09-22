@@ -59,7 +59,6 @@ export const updateUser = mutation({
     },
 });
 
-
 export const updateProfile = mutation({
     args: {
         clerkId: v.string(),

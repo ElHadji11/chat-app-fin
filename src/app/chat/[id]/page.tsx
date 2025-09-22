@@ -13,6 +13,11 @@ export default async function Conversations({ params }: { params: Promise<{ id: 
 
     if (!userId) { redirect(`/sign-in`) }
 
+    const preloadedConversationInfo = await preloadQuery(api.chats.getConversationInfo, {
+        conversationId: conversationId as Id<"conversations">,
+        userId
+    })
+
     const preloadedMessages = await preloadQuery(api.chats.getMessages, {
         conversationId: conversationId as Id<"conversations">,
         userId
@@ -21,8 +26,15 @@ export default async function Conversations({ params }: { params: Promise<{ id: 
     return (
         <div className="h-screen flex flex-col w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
-                <ChatList userId={userId!} preloadedMessages={preloadedMessages} />
-                <FormChat userId={userId!} conversationId={conversationId} />
+                <ChatList
+                    userId={userId!}
+                    preloadedMessages={preloadedMessages}
+                    preloadedConversationInfo={preloadedConversationInfo}
+                />
+                <FormChat
+                    userId={userId!}
+                    conversationId={conversationId}
+                    preloadedConversationInfo={preloadedConversationInfo} />
             </div>
         </div>
     )

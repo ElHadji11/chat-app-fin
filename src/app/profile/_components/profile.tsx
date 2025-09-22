@@ -104,7 +104,7 @@ export default function ProfileComponent({ preloadedUserInfo }: {
         }
     }
 
-    console.log('userInfo', userInfo)
+    // console.log('userInfo', userInfo)
     return (
         <>
             <header className="bg-[#202C33] p-4 flex items-center">

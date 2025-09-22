@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fetchMutation } from "convex/nextjs"
-import { useMutation } from "convex/react"
+import { Preloaded, useMutation } from "convex/react"
 import { Mic, Paperclip, Send, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -17,7 +17,9 @@ interface FormInputs {
 
 export default function FormChat({ conversationId, userId }: {
     conversationId: string,
-    userId: string
+    userId: string,
+    preloadedConversationInfo: Preloaded<typeof api.chats.getConversationInfo>
+
 }) {
     // const { userId } = useAuth()
 
@@ -239,7 +241,7 @@ export default function FormChat({ conversationId, userId }: {
                                 className="h-20 w-20 object-cover rounded-md"
                             />
                             <button onClick={() => removeAttachment(index)}
-                                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-700 transition-opacity"
                             >
                                 <X className="h-4 w-4 text-white" />
                             </button>
