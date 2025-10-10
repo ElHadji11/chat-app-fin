@@ -71,6 +71,7 @@ export const sendMessage = mutation({
         senderId: v.string(),
         type: v.optional(v.union(v.literal("text"), v.literal("image"))),
         mediaUrl: v.optional(v.string()),
+        replyTo: v.optional(v.id("messages")),
     },
     handler: async (ctx, args) => {
         const sender = await ctx.db
@@ -89,7 +90,8 @@ export const sendMessage = mutation({
             updatedAt: Date.now(),
             isEdited: false,
             deletedBy: [],
-            readBy: [sender._id]
+            readBy: [sender._id],
+            replyTo: args.replyTo,
         });
 
         const conversation = await ctx.db.get(args.conversationId);
@@ -179,6 +181,22 @@ export const getMessages = query({
                 const sender = await ctx.db.get(msg.senderId);
                 const readByArray = msg.readBy || [];
 
+                let replyToMessage = null;
+                if (msg.replyTo) {
+                    const originalMessage = await ctx.db.get(msg.replyTo);
+                    if (originalMessage) {
+                        const originalSender = await ctx.db.get(originalMessage.senderId);
+                        replyToMessage = {
+                            id: originalMessage._id,
+                            content: originalMessage.content,
+                            sender: originalSender?.name ?? "Unknown",
+                            senderId: originalMessage.senderId,
+                            type: originalMessage.type,
+                            mediaUrl: originalMessage.mediaUrl,
+                        };
+                    }
+                }
+
                 return {
                     id: msg._id,
                     sender_userId: sender?.clerkId,
@@ -190,7 +208,8 @@ export const getMessages = query({
                     mediaUrl: msg.mediaUrl,
                     isMyMessage: msg.senderId === user._id,
                     isDelivered: true,
-                    isRead: readByArray.includes(otherParticipantId), //
+                    isRead: readByArray.includes(otherParticipantId),
+                    replyTo: replyToMessage
                 };
             })
         );
