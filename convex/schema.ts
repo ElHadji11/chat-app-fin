@@ -40,6 +40,9 @@ export default defineSchema({
         isEdited: v.boolean(),
         deletedBy: v.optional(v.array(v.id("users"))),
         readBy: v.optional(v.array(v.id("users"))),
+        duration: v.optional(v.number()),
+        waveformData: v.optional(v.array(v.number())),
+        fileName: v.optional(v.string()),
 
     })
 
@@ -59,6 +62,7 @@ export default defineSchema({
         mimeType: v.string(),
         duration: v.optional(v.number()),
         fileName: v.string(),
+        waveformData: v.optional(v.array(v.number())),
     })
         .index("by_message", ["messageId"])
         .index("by_type", ["type"]),

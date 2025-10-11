@@ -69,9 +69,18 @@ export const sendMessage = mutation({
         conversationId: v.id("conversations"),
         content: v.string(),
         senderId: v.string(),
-        type: v.optional(v.union(v.literal("text"), v.literal("image"))),
+        type: v.union(
+            v.literal("text"),
+            v.literal("image"),
+            v.literal("video"),
+            v.literal("audio"),
+            v.literal("file")
+        ),
         mediaUrl: v.optional(v.string()),
         replyTo: v.optional(v.id("messages")),
+        duration: v.optional(v.number()),
+        waveformData: v.optional(v.array(v.number())),
+        fileName: v.optional(v.string())
     },
     handler: async (ctx, args) => {
         const sender = await ctx.db
@@ -85,8 +94,11 @@ export const sendMessage = mutation({
             conversationId: args.conversationId,
             senderId: sender._id,
             content: args.content,
-            type: args.type ?? "text",
+            type: args.type,
             mediaUrl: args.mediaUrl,
+            duration: args.duration,
+            waveformData: args.waveformData,
+            fileName: args.fileName,
             updatedAt: Date.now(),
             isEdited: false,
             deletedBy: [],
@@ -116,24 +128,47 @@ export const sendMessage = mutation({
     },
 });
 
-const formatChatTime = (date: Date) => {
+const formatChatTime = (date: Date): string => {
     const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
 
+    // Partie 1: Définir le format de l'heure une seule fois
+    // Pour un format 24h et une locale française, vous pourriez utiliser 'fr-FR'.
+    const timeOptions: Intl.DateTimeFormatOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: false // Mettez `false` pour un format 24h
+    };
+    const timeString = date.toLocaleTimeString('en-US', timeOptions);
+
+    // Partie 2: Déterminer le préfixe de la date en fonction de l'ancienneté
+    // Cas 1: Le message a été envoyé aujourd'hui
     if (date.toDateString() === now.toDateString()) {
-        // Today: show time only
-        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    } else if (date.toDateString() === yesterday.toDateString()) {
-        // Yesterday
-        return 'Yesterday';
-    } else if (now.getTime() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
-        // Within last week: show day name
-        return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-        // Older: show date
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return timeString; // On retourne seulement l'heure
     }
+
+    // Cas 2: Le message a été envoyé hier
+    if (date.toDateString() === yesterday.toDateString()) {
+        return `Yesterday, ${timeString}`;
+    }
+
+    // Cas 3: Le message a été envoyé dans les 7 derniers jours
+    // On vérifie que la date n'est pas "hier" pour éviter la redondance
+    if (now.getTime() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        return `${dayName}, ${timeString}`;
+    }
+
+    // Cas 4: Le message est plus vieux, mais de l'année en cours
+    if (date.getFullYear() === now.getFullYear()) {
+        const dateString = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `${dateString}, ${timeString}`;
+    }
+
+    // Cas 5: Le message date d'une année précédente (cas par défaut)
+    const fullDateString = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return `${fullDateString}, ${timeString}`;
 };
 
 // getMessages()
@@ -209,7 +244,10 @@ export const getMessages = query({
                     isMyMessage: msg.senderId === user._id,
                     isDelivered: true,
                     isRead: readByArray.includes(otherParticipantId),
-                    replyTo: replyToMessage
+                    replyTo: replyToMessage,
+                    duration: msg.duration,
+                    waveformData: msg.waveformData,
+                    fileName: msg.fileName,
                 };
             })
         );
@@ -300,7 +338,10 @@ export const getConversation = query({
                     type: lastVisibleMessage?.type,
                     isLastMessageFromMe: lastVisibleMessage?.senderId === user._id,
                     sortTimestamp,
-                    isLastMessageRead: isLastMessageRead
+                    isLastMessageRead: isLastMessageRead,
+                    lastMessageDuration: lastVisibleMessage?.type === "audio"
+                        ? lastVisibleMessage.duration
+                        : undefined,
                 };
             })
         );
