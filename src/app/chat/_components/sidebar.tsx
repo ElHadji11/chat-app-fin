@@ -54,6 +54,13 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     //     }, 0) || 0;
     // }, [conversations, currentConversationId])
 
+    const formatDuration = (seconds: number | undefined | null): string => {
+        if (seconds == null || isNaN(seconds)) return ""; // Sécurité
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
+    };
+
     const filteredConversations = useMemo(() => {
         let result = conversations || [];
 
@@ -240,6 +247,18 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                                                 {chat.type === "image" ? (
                                                     <span className="flex items-center gap-1">
                                                         <span className="text-[#8696A0]">📸</span> Photo
+                                                    </span>
+                                                ) : chat.type === "audio" && chat.lastMessageDuration != null ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="text-[#8696A0]">🎤 Voice message ({formatDuration(chat.lastMessageDuration)}) </span>
+                                                    </span>
+                                                ) : chat.type === "video" ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="text-[#8696A0]">🎥</span> Video
+                                                    </span>
+                                                ) : chat.type === "file" ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="text-[#8696A0]">📎</span> File
                                                     </span>
                                                 ) : (
                                                     <HighlightText text={chat.lastMessage} searchQuery={searchQuery} />
