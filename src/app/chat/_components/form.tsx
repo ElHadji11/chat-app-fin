@@ -230,7 +230,7 @@ export default function ChatForm({
             await onDraftUpdate("")
             reset()
             onCancelReply()
-            toast.success("Message envoyé")
+            // toast.success("Message envoyé")
         } catch (error) {
             console.error("Error sending message:", error)
             toast.error("Erreur lors de l'envoi du message")
