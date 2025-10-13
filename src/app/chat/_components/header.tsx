@@ -21,7 +21,6 @@ import { useMutation } from "convex/react"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-
 import { Button } from "@/components/ui/button"
 import { MoreVertical } from "lucide-react"
 import { api } from "../../../../convex/_generated/api"
@@ -29,7 +28,6 @@ import { Id } from "../../../../convex/_generated/dataModel"
 
 export default function Header({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
-
     const router = useRouter()
     const { userId } = useAuth()
 
@@ -37,11 +35,10 @@ export default function Header({ children }: { children: React.ReactNode }) {
     const [showDeleteAlert, setShowDeleteAlert] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    // Get our delete mutation
     const deleteConversation = useMutation(api.chats.deleteConversation)
 
     const handleDelete = async () => {
-        if (!conversationId || !userId) return;
+        if (!conversationId || !userId) return
 
         try {
             setIsDeleting(true)
@@ -53,18 +50,19 @@ export default function Header({ children }: { children: React.ReactNode }) {
             toast.success("Chat deleted successfully")
             router.push("/chat")
         } catch (error) {
-            toast.error("Failed to delete chat");
-            console.error("Error deleting chat:", error);
+            toast.error("Failed to delete chat")
+            console.error("Error deleting chat:", error)
         } finally {
-            setIsDeleting(false);
-            setShowDeleteAlert(false);
+            setIsDeleting(false)
+            setShowDeleteAlert(false)
         }
-
     }
 
     return (
-        <div className="flex-1 flex flex-col w-full">
-            <div className="bg-muted dark:bg-[#202C33] p-4 flex justify-between items-center border-border dark:border-[#313D45]">
+        // ✅ CORRECTION: Structure flex column avec hauteur contrôlée
+        <div className="flex-1 flex flex-col overflow-hidden">
+            {/* ✅ Header bar - fixe en haut (shrink-0) */}
+            <div className="shrink-0 bg-muted dark:bg-[#202C33] p-4 flex justify-between items-center border-b border-border dark:border-[#313D45]">
                 <div className="flex justify-end w-full space-x-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -72,20 +70,30 @@ export default function Header({ children }: { children: React.ReactNode }) {
                                 <MoreVertical className="w-5 h-5" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" >
-                            <DropdownMenuItem onClick={() => setShowDeleteAlert(true)}
-                                className="text-red-500 focus-text-red-500"
-                            >Delete Chat
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                onClick={() => setShowDeleteAlert(true)}
+                                className="text-red-500 focus:text-red-500"
+                            >
+                                Delete Chat
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
             </div>
 
+            {/* ✅ Content area - prend l'espace restant */}
+            <div className="flex-1 overflow-hidden">
+                {children}
+            </div>
+
+            {/* Alert Dialog */}
             <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-[#E9EDEF]">Delete Chat</AlertDialogTitle>
+                        <AlertDialogTitle className="text-[#E9EDEF]">
+                            Delete Chat
+                        </AlertDialogTitle>
                         <AlertDialogDescription className="text-[#8696A0]">
                             Are you sure you want to delete this chat? This action cannot be undone.
                         </AlertDialogDescription>
@@ -94,7 +102,9 @@ export default function Header({ children }: { children: React.ReactNode }) {
                         <AlertDialogCancel
                             className="bg-[#2A3942] text-[#E9EDEF] hover:bg-[#364147] hover:text-[#E9EDEF]"
                             onClick={() => setShowDeleteAlert(false)}
-                        >Cancel</AlertDialogCancel>
+                        >
+                            Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-red-500 hover:bg-red-600 text-white"
@@ -105,7 +115,6 @@ export default function Header({ children }: { children: React.ReactNode }) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            {children}
         </div>
     )
 }

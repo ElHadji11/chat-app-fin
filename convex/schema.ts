@@ -17,6 +17,7 @@ export default defineSchema({
         lastMessageId: v.optional(v.id("messages")),
         deletedBy: v.optional(v.array(v.id("users"))),
         isDraft: v.optional(v.boolean()),
+        typing: v.optional(v.array(v.id("users"))),
     })
         .index("by_participants", ["participantOne", "participantTwo"])
         .index("by_participantOne", ["participantOne"])
@@ -35,19 +36,25 @@ export default defineSchema({
             v.literal("file")
         ),
         mediaUrl: v.optional(v.string()),
+        duration: v.optional(v.number()),
+        waveformData: v.optional(v.array(v.number())),
         replyTo: v.optional(v.id("messages")),
         updatedAt: v.number(),
         isEdited: v.boolean(),
         deletedBy: v.optional(v.array(v.id("users"))),
         readBy: v.optional(v.array(v.id("users"))),
-        duration: v.optional(v.number()),
-        waveformData: v.optional(v.array(v.number())),
         fileName: v.optional(v.string()),
 
     })
 
         .index("by_conversation", ["conversationId"]) // Correction ici
         .index("by_sender", ["senderId"]),
+
+    drafts: defineTable({
+        userId: v.id("users"),
+        conversationId: v.id("conversations"),
+        content: v.string(),
+    }).index("by_user_conversation", ["userId", "conversationId"]),
 
     media: defineTable({
         messageId: v.id("messages"),

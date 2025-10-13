@@ -7,91 +7,82 @@ import { useEffect, useRef } from "react"
 import { api } from "../../../../convex/_generated/api";
 import { VoiceMessage } from "./voice-message";
 import { FileText } from "lucide-react";
+import { MessageBubble, Message as MessageType } from "./message-bubble";
 
-interface Message {
-    content: string;
-    id: Id<"messages">;
-    isSent: boolean;
-    sender: string;
-    sender_userId: string | undefined;
-    time: string;
-    type: "text" | "image" | "video" | "audio" | "file";
-    mediaUrl?: string;
-    audioUrl?: string;
-    waveformData?: number[];
-    duration?: number;
+interface ChatListProps {
+    userId: string;
+    preloadedMessages: Preloaded<typeof api.chats.getMessages>;
+    onReply: (message: MessageType) => void;
+    onScrollToMessage: (messageId: string) => void;
+    messageRefs: React.RefObject<Map<string, HTMLDivElement> | null>;
+    messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function ChatList({
     userId,
     preloadedMessages,
-    preloadedConversationInfo
-}: {
-    userId: string,
-    preloadedMessages: Preloaded<typeof api.chats.getMessages>
-    preloadedConversationInfo: Preloaded<typeof api.chats.getConversationInfo>
-}) {
-
+    onReply,
+    onScrollToMessage,
+    messageRefs,
+    messagesEndRef,
+}: ChatListProps) {
     const messages = usePreloadedQuery(preloadedMessages)
-    const messagesEndRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        messagesEndRef?.current?.scrollIntoView({ behavior: "smooth" })
     }, [messages])
 
     return (
         <div ref={containerRef}
-            className="flex-1 overflow-y-auto bg-background dark:bg-[#0B141A] max-h-[calc(100vh-135px)]"
+            className="flex-1 overflow-y-auto bg-background dark:bg-[#0B141A] "
             style={{
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none',
-                WebkitOverflowScrolling: 'touch'
+                msOverflowStyle: 'none',  // Pour Internet Explorer et Edge
+                scrollbarWidth: 'none',   // Pour Firefox
+                WebkitOverflowScrolling: 'touch' // Améliore le défilement sur les appareils Apple (iOS)
             }
             }
         >
-            <div className="p-4 min-h-full flex flex-col space-y-4">
-                {messages.map((message: Message) => {
-                    const isMyMessage = message.sender_userId === userId
+            <div className="p-4 flex flex-col space-y-2">
+                {messages.map((msg) => {
+                    // Transformation des données Convex vers le format attendu par MessageBubble
+                    const messageForBubble: MessageType = {
+                        id: msg.id,
+                        content: msg.content,
+                        senderId: msg.sender_userId!,
+                        senderName: msg.sender,
+                        type: msg.type as MessageType["type"],
+                        mediaUrl: msg.mediaUrl,
+                        duration: msg.duration,
+                        waveformData: msg.waveformData,
+                        fileName: msg.fileName,
+                        timestamp: new Date(msg.creationTime),
+                        isOwn: msg.sender_userId === userId,
+                        replyTo: msg.replyTo ? {
+                            id: msg.replyTo.id,
+                            content: msg.replyTo.content,
+                            sender: msg.replyTo.sender,
+                            type: msg.replyTo.type as MessageType["type"],
+                            duration: msg.replyTo.duration,
+                            fileName: msg.replyTo.fileName,
+                        } : undefined,
+                    };
 
                     return (
-                        <div key={message.id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`rounded-lg p-3 max-w-xs lg:max-w-md ${isMyMessage ? "bg-primary dark:bg-[#005C4B] text-primary-foreground" : 'bg-muted dark:bg-[#202C33]'}`}>
-                                {!isMyMessage && (
-                                    <p className="text-xs dark:text-white text-muted-foreground mb-1">{message.sender}</p>
-                                )}
-
-                                {message.type === "image" && message.mediaUrl && (
-                                    <img src={message.mediaUrl} alt="Image" className="w-full h-auto max-h-[300px] object-contain rounded-lg" />
-                                )}
-
-                                {message.type === "video" && message.mediaUrl && (
-                                    <video src={message.mediaUrl} controls className="w-full h-auto max-h-[300px] object-contain rounded-lg" />
-                                )}
-
-                                {message.type === "audio" && message.mediaUrl && message.waveformData && message.duration && (
-                                    <VoiceMessage
-                                        audioUrl={message.mediaUrl}
-                                        waveformData={message.waveformData}
-                                        duration={message.duration}
-                                    />
-                                )}
-
-                                {message.type === "file" && message.mediaUrl && (
-                                    <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-secondary p-3 rounded-lg hover:bg-secondary/80">
-                                        <FileText className="h-6 w-6 shrink-0" />
-                                        <p className="text-sm dark:text-white break-words whitespace-pre-wrap">{message.content || "File"}</p>
-                                    </a>
-                                )}
-
-                                {message.type === "text" && (
-                                    <p className="text-sm dark:text-white break-words whitespace-pre-wrap">{message.content}</p>
-                                )}
-
-                                <p className="text-right text-xs text-muted-foreground mt-1">{message.time}</p>
-                            </div>
+                        <div
+                            key={messageForBubble.id}
+                            ref={(el) => {
+                                if (el && messageRefs.current) messageRefs.current.set(messageForBubble.id, el);
+                                else messageRefs.current?.delete(messageForBubble.id);
+                            }}
+                        >
+                            <MessageBubble
+                                message={messageForBubble}
+                                onReply={onReply}
+                                onQuoteClick={onScrollToMessage}
+                            />
                         </div>
-                    )
+                    );
                 })}
                 <div ref={messagesEndRef} />
             </div>

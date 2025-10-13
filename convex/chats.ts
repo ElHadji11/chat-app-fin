@@ -128,6 +128,31 @@ export const sendMessage = mutation({
     },
 });
 
+export const getUserDrafts = query({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity()
+        if (!identity) return []
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+            .unique()
+
+        if (!user) return []
+
+        const drafts = await ctx.db
+            .query("drafts")
+            .withIndex("by_user_conversation", (q) => q.eq("userId", user._id))
+            .collect()
+
+        return drafts.map(draft => ({
+            conversationId: draft.conversationId,
+            content: draft.content
+        }))
+    }
+})
+
 const formatChatTime = (date: Date): string => {
     const now = new Date();
     const yesterday = new Date();
@@ -227,7 +252,10 @@ export const getMessages = query({
                             sender: originalSender?.name ?? "Unknown",
                             senderId: originalMessage.senderId,
                             type: originalMessage.type,
-                            mediaUrl: originalMessage.mediaUrl,
+                            // mediaUrl: originalMessage.mediaUrl,
+                            duration: originalMessage.duration,
+                            fileName: originalMessage.fileName,
+
                         };
                     }
                 }
@@ -237,7 +265,7 @@ export const getMessages = query({
                     sender_userId: sender?.clerkId,
                     sender: sender?.name ?? "Unknown",
                     content: msg.content,
-                    time: formatChatTime(new Date(msg._creationTime)),
+                    creationTime: msg._creationTime,
                     isSent: true,
                     type: msg.type,
                     mediaUrl: msg.mediaUrl,
@@ -248,6 +276,7 @@ export const getMessages = query({
                     duration: msg.duration,
                     waveformData: msg.waveformData,
                     fileName: msg.fileName,
+
                 };
             })
         );
@@ -263,10 +292,10 @@ export const getConversation = query({
         const user = await ctx.db
             .query("users")
             .filter((q) => q.eq(q.field("clerkId"), args.userId))
-            .first();
+            .first()
 
         if (!user) {
-            return [];
+            return []
         }
 
         const conversations = await ctx.db
@@ -277,56 +306,69 @@ export const getConversation = query({
                     q.eq(q.field("participantTwo"), user._id)
                 ),
             )
-
-            .collect();
+            .collect()
 
         const filteredConversations = conversations
             .filter((conv: Doc<"conversations">) => {
-                const deletedByArray = conv.deletedBy || [];
-                const isDraft = conv.isDraft || false;
-                const isDeleted = deletedByArray.includes(user._id);
-                return !isDeleted && !isDraft;
-            });
+                const deletedByArray = conv.deletedBy || []
+                const isDraft = conv.isDraft || false
+                const isDeleted = deletedByArray.includes(user._id)
+                return !isDeleted && !isDraft
+            })
+
+        // ✅ NOUVEAU : Récupérer tous les drafts de l'utilisateur en une seule query
+        const drafts = await ctx.db
+            .query("drafts")
+            .filter((q) => q.eq(q.field("userId"), user._id))
+            .collect()
+
+        // ✅ Créer une Map pour un accès rapide aux drafts
+        const draftsMap = new Map(
+            drafts.map(d => [d.conversationId.toString(), d.content])
+        )
 
         const conversationsWithDetails = await Promise.all(
             filteredConversations.map(async (conv) => {
                 const otherParticipantId =
                     conv.participantOne === user._id
                         ? conv.participantTwo
-                        : conv.participantOne;
+                        : conv.participantOne
 
-                const otherUser = await ctx.db.get(otherParticipantId);
+                const otherUser = await ctx.db.get(otherParticipantId)
 
                 const allMessages = await ctx.db
                     .query("messages")
                     .filter((q) => q.eq(q.field("conversationId"), conv._id))
                     .order("desc")
-                    .collect();
+                    .collect()
 
                 const visibleMessages = allMessages.filter(msg => {
-                    const deletedByArray = msg.deletedBy || [];
-                    return !deletedByArray.includes(user._id);
-                });
+                    const deletedByArray = msg.deletedBy || []
+                    return !deletedByArray.includes(user._id)
+                })
 
-                const lastVisibleMessage = visibleMessages[0]; // Le plus récent                
+                const lastVisibleMessage = visibleMessages[0]
 
                 // Compter les messages non lus
                 const unreadCount = visibleMessages.filter(msg => {
-                    const readByArray = msg.readBy || [];
-                    const isFromOther = msg.senderId !== user._id;
-                    const isUnread = !readByArray.includes(user._id);
-                    return isFromOther && isUnread;
-                }).length;
+                    const readByArray = msg.readBy || []
+                    const isFromOther = msg.senderId !== user._id
+                    const isUnread = !readByArray.includes(user._id)
+                    return isFromOther && isUnread
+                }).length
 
-                let isLastMessageRead = false;
+                let isLastMessageRead = false
                 if (lastVisibleMessage && lastVisibleMessage.senderId === user._id) {
-                    const readByArray = lastVisibleMessage.readBy || [];
-                    isLastMessageRead = readByArray.includes(otherParticipantId);
+                    const readByArray = lastVisibleMessage.readBy || []
+                    isLastMessageRead = readByArray.includes(otherParticipantId)
                 }
 
                 const sortTimestamp = lastVisibleMessage
                     ? lastVisibleMessage._creationTime
-                    : conv._creationTime;
+                    : conv._creationTime
+
+                // ✅ NOUVEAU : Récupérer le draft pour cette conversation
+                const draftContent = draftsMap.get(conv._id.toString()) || null
 
                 return {
                     id: conv._id,
@@ -342,15 +384,17 @@ export const getConversation = query({
                     lastMessageDuration: lastVisibleMessage?.type === "audio"
                         ? lastVisibleMessage.duration
                         : undefined,
-                };
+                    draft: draftsMap.get(conv._id.toString()) || null,
+                    hasDraft: !!draftsMap.get(conv._id.toString()),
+                }
             })
-        );
+        )
 
         return conversationsWithDetails.sort((a: any, b: any) => {
-            return b.sortTimestamp - a.sortTimestamp;
-        });
+            return b.sortTimestamp - a.sortTimestamp
+        })
     },
-});
+})
 
 //delete
 export const deleteConversation = mutation({
@@ -533,34 +577,194 @@ export const getConversationInfo = query({
     handler: async (ctx, args) => {
         const user = await ctx.db
             .query("users")
-            .filter((q) => q.eq(q.field("clerkId"), args.userId))
-            .first();
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+            .first()
 
-        if (!user) throw new Error("User not found");
+        if (!user) throw new Error("User not found")
 
-        const conversation = await ctx.db.get(args.conversationId);
-        if (!conversation) throw new Error("Conversation not found");
+        const conversation = await ctx.db.get(args.conversationId)
+        if (!conversation) throw new Error("Conversation not found")
 
-        // Vérifier que l'utilisateur fait partie de la conversation
-        if (conversation.participantOne !== user._id && conversation.participantTwo !== user._id) {
-            throw new Error("Unauthorized");
+        if (conversation.participantOne !== user._id &&
+            conversation.participantTwo !== user._id) {
+            throw new Error("Unauthorized")
         }
 
         const otherParticipantId =
             conversation.participantOne === user._id
                 ? conversation.participantTwo
-                : conversation.participantOne;
+                : conversation.participantOne
 
-        const otherUser = await ctx.db.get(otherParticipantId);
+        const otherUser = await ctx.db.get(otherParticipantId)
+
+        // ✅ Récupérer les utilisateurs qui tapent (sauf l'utilisateur actuel)
+        const typingUserIds = (conversation.typing || []).filter(id => id !== user._id)
+
+        console.log("Typing users IDs:", typingUserIds)
+
+        const typingUsers = await Promise.all(
+            typingUserIds.map(async (userId) => {
+                const typingUser = await ctx.db.get(userId)
+                return typingUser?.name || "Someone"
+            })
+        )
+
+        console.log("Typing users names:", typingUsers)
 
         return {
             id: conversation._id,
             name: otherUser?.name ?? "Unknown",
             image: otherUser?.image,
             isDraft: conversation.isDraft || false,
-        };
+            typingUsers, // ✅ Noms des utilisateurs qui tapent
+        }
     },
-});
+})
+
+
+export const updateDraft = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        content: v.string()
+    },
+    handler: async (ctx, { conversationId, content }) => {
+        const identity = await ctx.auth.getUserIdentity()
+        if (!identity) {
+            console.error("❌ Not authenticated")
+            throw new Error("Non authentifié.")
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+            .unique()
+
+        if (!user) {
+            console.error("❌ User not found")
+            throw new Error("Utilisateur non trouvé.")
+        }
+
+        const existingDraft = await ctx.db
+            .query("drafts")
+            .withIndex("by_user_conversation", (q) =>
+                q.eq("userId", user._id).eq("conversationId", conversationId)
+            )
+            .unique()
+
+        if (content === "") {
+            // Supprimer le draft
+            if (existingDraft) {
+                await ctx.db.delete(existingDraft._id)
+                console.log("🗑️ Draft deleted")
+            }
+        } else if (existingDraft) {
+            // Mettre à jour le draft existant
+            await ctx.db.patch(existingDraft._id, { content })
+            console.log("✏️ Draft updated:", content.substring(0, 30))
+        } else {
+            // Créer un nouveau draft
+            await ctx.db.insert("drafts", {
+                userId: user._id,
+                conversationId,
+                content
+            })
+            console.log("➕ Draft created:", content.substring(0, 30))
+        }
+    },
+})
+
+export const startTyping = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        userId: v.string() // ✅ Utilise clerkId (string)
+    },
+    handler: async (ctx, { conversationId, userId }) => {
+        // Récupérer l'utilisateur par clerkId
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+            .first()
+
+        if (!user) {
+            console.error("User not found:", userId)
+            return
+        }
+
+        const conversation = await ctx.db.get(conversationId)
+        if (!conversation) {
+            console.error("Conversation not found:", conversationId)
+            return
+        }
+
+        const typing = conversation.typing || []
+        if (!typing.includes(user._id)) {
+            await ctx.db.patch(conversationId, {
+                typing: [...typing, user._id]
+            })
+            console.log("✅ User started typing:", user.name)
+        }
+    },
+})
+
+export const stopTyping = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        userId: v.string() // ✅ Utilise clerkId (string)
+    },
+    handler: async (ctx, { conversationId, userId }) => {
+        // Récupérer l'utilisateur par clerkId
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+            .first()
+
+        if (!user) {
+            console.error("User not found:", userId)
+            return
+        }
+
+        const conversation = await ctx.db.get(conversationId)
+        if (!conversation || !conversation.typing) return
+
+        const newTyping = conversation.typing.filter(id => id !== user._id)
+        await ctx.db.patch(conversationId, { typing: newTyping })
+        console.log("✅ User stopped typing:", user.name)
+    },
+})
+
+export const getDraft = query({
+    args: {
+        conversationId: v.id("conversations")
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity()
+        if (!identity) {
+            console.log("❌ No identity")
+            return null
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+            .unique()
+
+        if (!user) {
+            console.log("❌ User not found")
+            return null
+        }
+
+        const draft = await ctx.db
+            .query("drafts")
+            .withIndex("by_user_conversation", (q) =>
+                q.eq("userId", user._id).eq("conversationId", args.conversationId)
+            )
+            .unique()
+
+        console.log("📝 Draft found:", draft)
+
+        return draft ? { content: draft.content } : null
+    }
+})
 
 export const generateUploadUrl = mutation(async (ctx) => {
     return await ctx.storage.generateUploadUrl();

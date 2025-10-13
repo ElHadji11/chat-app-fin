@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@clerk/nextjs"
 import { Avatar } from "@radix-ui/react-avatar"
 import { Preloaded, usePreloadedQuery, useMutation } from "convex/react"
-import { MoreVertical, Search, Users2, Mail } from "lucide-react"
+import { MoreVertical, Search, Users2, Mail, FileEdit } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useMemo, useState, useEffect } from "react"
@@ -17,11 +17,11 @@ import { api } from "../../../../convex/_generated/api"
 import SearchComponent from "./search"
 
 interface SideBarProps {
-    preloadedUserInfo: Preloaded<typeof api.users.readUser>;
-    preloadedConversations: Preloaded<typeof api.chats.getConversation>;
+    preloadedUserInfo: Preloaded<typeof api.users.readUser>
+    preloadedConversations: Preloaded<typeof api.chats.getConversation>
 }
 
-type FilterType = 'all' | 'unread'
+type FilterType = 'all' | 'unread' // ✅ Pas de filtre drafts
 
 export default function Sidebar({ preloadedUserInfo, preloadedConversations }: SideBarProps) {
     const pathname = usePathname()
@@ -33,10 +33,8 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     const conversations = usePreloadedQuery(preloadedConversations)
     const markAsRead = useMutation(api.chats.markMessagesAsRead)
 
-    // Obtenir l'ID de la conversation actuelle
     const currentConversationId = pathname.split("/")?.[2]
 
-    // Marquer les messages comme lus quand on change de conversation
     useEffect(() => {
         if (currentConversationId && userId) {
             markAsRead({
@@ -46,27 +44,19 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
         }
     }, [currentConversationId, userId, markAsRead])
 
-    // Calculer le total des messages non lus
-    // const totalUnreadCount = useMemo(() => {
-    //     return conversations?.reduce((total, chat) => {
-    //         const isCurrentConversation = currentConversationId === chat.id;
-    //         return total + (isCurrentConversation ? 0 : (chat.unread || 0));
-    //     }, 0) || 0;
-    // }, [conversations, currentConversationId])
-
     const formatDuration = (seconds: number | undefined | null): string => {
-        if (seconds == null || isNaN(seconds)) return ""; // Sécurité
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-    };
+        if (seconds == null || isNaN(seconds)) return ""
+        const mins = Math.floor(seconds / 60)
+        const secs = Math.floor(seconds % 60)
+        return `${mins}:${secs.toString().padStart(2, "0")}`
+    }
 
     const filteredConversations = useMemo(() => {
-        let result = conversations || [];
+        let result = conversations || []
 
         // Filtrer par statut de lecture
         if (filter === 'unread') {
-            result = result.filter(chat => chat.unread > 0);
+            result = result.filter(chat => chat.unread > 0)
         }
 
         // Filtrer par recherche
@@ -74,27 +64,25 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
             result = result.filter((chat) => {
                 const matchesName = chat.name.toLowerCase().includes(searchQuery.toLowerCase())
                 const matchesMessage = chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-                return matchesName || matchesMessage
+                const matchesDraft = chat.draft?.toLowerCase().includes(searchQuery.toLowerCase())
+                return matchesName || matchesMessage || matchesDraft
             })
 
-            // Trier les résultats de recherche
             result.sort((a, b) => {
                 const aNameMatch = a.name.toLowerCase().includes(searchQuery.toLowerCase())
                 const bNameMatch = b.name.toLowerCase().includes(searchQuery.toLowerCase())
 
-                if (aNameMatch && !bNameMatch) return -1;
+                if (aNameMatch && !bNameMatch) return -1
                 if (!aNameMatch && bNameMatch) return 1
 
-                // Si même priorité de recherche, trier par date du dernier message
-                return 0;
+                return 0
             })
         }
 
-        return result;
+        return result
     }, [searchQuery, conversations, filter])
 
-    // Compter les conversations par statut
-    const unreadChatsCount = conversations?.filter(chat => chat.unread > 0).length || 0;
+    const unreadChatsCount = conversations?.filter(chat => chat.unread > 0).length || 0
 
     return (
         <div className="w-[70px] md:w-[380px] lg:w-1/4 h-screen flex flex-col bg-background dark:bg-[#111B21] border-r border-border dark:border-[#313D45]">
@@ -140,7 +128,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                 </div>
             </div>
 
-            {/* Filter Buttons - Only All and Unread */}
+            {/* Filter Buttons - All and Unread only */}
             <div className="hidden md:block px-2 py-3 bg-[#111B21] border-b border-[#313D45]">
                 <div className="flex gap-1 bg-[#202C33] rounded-lg p-1">
                     <Button
@@ -148,8 +136,8 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                         size="sm"
                         onClick={() => setFilter('all')}
                         className={`flex-1 text-xs h-8 ${filter === 'all'
-                            ? "bg-[#00A884] text-white hover:bg-[#00A884]/90"
-                            : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
+                                ? "bg-[#00A884] text-white hover:bg-[#00A884]/90"
+                                : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
                             }`}
                     >
                         <Mail className="w-3 h-3 mr-1" />
@@ -161,8 +149,8 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                         size="sm"
                         onClick={() => setFilter('unread')}
                         className={`flex-1 text-xs h-8 relative ${filter === 'unread'
-                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                            : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
+                                ? "bg-blue-500 text-white hover:bg-blue-600"
+                                : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
                             }`}
                     >
                         <Mail className="w-3 h-3 mr-1" />
@@ -201,14 +189,16 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                     </div>
                 ) : (
                     filteredConversations.map((chat) => {
-                        const isCurrentChat = pathname.split("/")?.[2] === chat?.id;
-                        const hasUnread = chat.unread > 0 && !isCurrentChat;
+                        const isCurrentChat = pathname.split("/")?.[2] === chat?.id
+                        const hasUnread = chat.unread > 0 && !isCurrentChat
+                        const hasDraft = chat.hasDraft // ✅ Vérifier si un draft existe
 
                         return (
                             <Link href={`/chat/${chat.id}`} key={chat.id}>
                                 <div className={`flex items-center px-2 py-2 md:px-3 md:py-3 hover:bg-[#202C33] cursor-pointer transition-colors
                                     ${isCurrentChat ? "bg-[#202C33]" : ""}
                                     ${hasUnread ? "bg-gradient-to-r from-blue-500/5 to-transparent" : ""}
+                                    ${hasDraft && !hasUnread ? "bg-gradient-to-r from-orange-500/5 to-transparent" : ""}
                                 `}>
                                     <div className="relative">
                                         <Avatar>
@@ -221,8 +211,15 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                                         {hasUnread && (
                                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse"></div>
                                         )}
+                                        {/* ✅ Indicateur de draft sur l'avatar (uniquement si pas de unread) */}
+                                        {hasDraft && !hasUnread && (
+                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-orange-500 rounded-full border-2 border-[#111B21] flex items-center justify-center">
+                                                <FileEdit className="w-3 h-3 text-white" />
+                                            </div>
+                                        )}
                                     </div>
-                                    {/* Conversation details - Only visible on md and larger screens */}
+
+                                    {/* Conversation details */}
                                     <div className="hidden md:block flex-1 min-w-0 ml-3">
                                         <div className="flex justify-between items-baseline">
                                             <h2 className={`text-base font-normal truncate transition-colors ${hasUnread ? "text-white font-semibold" : "text-[#E9EDEF]"
@@ -230,10 +227,10 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                                                 <HighlightText text={chat.name} searchQuery={searchQuery} />
                                             </h2>
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs ml-2 shrink-0 ${hasUnread ? "text-blue-400 font-medium" : "text-[#8696A0]"}`}>
+                                                <span className={`text-xs ml-2 shrink-0 ${hasUnread ? "text-blue-400 font-medium" : "text-[#8696A0]"
+                                                    }`}>
                                                     {chat.time}
                                                 </span>
-                                                {/* Badge de compteur de messages non lus */}
                                                 {hasUnread && (
                                                     <div className="bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold animate-pulse">
                                                         {chat.unread > 99 ? '99+' : chat.unread}
@@ -241,40 +238,48 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                                                 )}
                                             </div>
                                         </div>
+
                                         <div className="flex items-center justify-between">
-                                            <p className={`text-sm truncate pr-2 transition-colors ${hasUnread ? "text-[#E9EDEF] font-medium" : "text-[#8696A0]"
-                                                }`}>
-                                                {chat.type === "image" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="text-[#8696A0]">📸</span> Photo
-                                                    </span>
-                                                ) : chat.type === "audio" && chat.lastMessageDuration != null ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="text-[#8696A0]">🎤 Voice message ({formatDuration(chat.lastMessageDuration)}) </span>
-                                                    </span>
-                                                ) : chat.type === "video" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="text-[#8696A0]">🎥</span> Video
-                                                    </span>
-                                                ) : chat.type === "file" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="text-[#8696A0]">📎</span> File
-                                                    </span>
-                                                ) : (
-                                                    <HighlightText text={chat.lastMessage} searchQuery={searchQuery} />
-                                                )}
-                                            </p>
-                                            {/* Chevrons seulement si j'ai envoyé le dernier message */}
-                                            {chat.isLastMessageFromMe && (
+                                            {/* ✅ Afficher le draft en priorité si présent */}
+                                            {hasDraft ? (
+                                                <p className="text-sm truncate pr-2 text-orange-400 italic flex items-center gap-1">
+                                                    <FileEdit className="w-3 h-3 flex-shrink-0" />
+                                                    <span className="truncate">Draft: {chat.draft}</span>
+                                                </p>
+                                            ) : (
+                                                <p className={`text-sm truncate pr-2 transition-colors ${hasUnread ? "text-[#E9EDEF] font-medium" : "text-[#8696A0]"
+                                                    }`}>
+                                                    {chat.type === "image" ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="text-[#8696A0]">📸</span> Photo
+                                                        </span>
+                                                    ) : chat.type === "audio" && chat.lastMessageDuration != null ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="text-[#8696A0]">🎤 Voice message ({formatDuration(chat.lastMessageDuration)})</span>
+                                                        </span>
+                                                    ) : chat.type === "video" ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="text-[#8696A0]">🎥</span> Video
+                                                        </span>
+                                                    ) : chat.type === "file" ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="text-[#8696A0]">📎</span> File
+                                                        </span>
+                                                    ) : (
+                                                        <HighlightText text={chat.lastMessage} searchQuery={searchQuery} />
+                                                    )}
+                                                </p>
+                                            )}
+
+                                            {/* Chevrons seulement si pas de draft et si j'ai envoyé le dernier message */}
+                                            {chat.isLastMessageFromMe && !hasDraft && (
                                                 <div className="flex-shrink-0 ml-1">
                                                     {chat.isLastMessageRead ? (
-                                                        // L'autre a lu mon dernier message - chevrons bleus
                                                         <svg className="w-4 h-4 text-[#53BDEB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 13l4 4L23 7" />
                                                         </svg>
                                                     ) : (
-                                                        // L'autre n'a pas encore lu mon dernier message - chevrons gris
                                                         <svg className="w-4 h-4 text-[#8696A0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 13l4 4L23 7" />
@@ -289,6 +294,10 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                                     {hasUnread && (
                                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full"></div>
                                     )}
+                                    {/* ✅ Barre indicatrice pour drafts (seulement si pas de unread) */}
+                                    {hasDraft && !hasUnread && (
+                                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-r-full"></div>
+                                    )}
                                 </div>
                             </Link>
                         )
@@ -299,10 +308,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     )
 }
 
-const HighlightText = ({ text, searchQuery }: {
-    text: string,
-    searchQuery: string
-}) => {
+const HighlightText = ({ text, searchQuery }: { text: string, searchQuery: string }) => {
     if (!searchQuery) return <>{text}</>
 
     const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'))
