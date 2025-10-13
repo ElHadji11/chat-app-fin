@@ -162,7 +162,7 @@ export default function ChatForm({
 
             // Réinitialiser
             handleCancelVoice()
-            toast.success("Message vocal envoyé")
+            // toast.success("Message vocal envoyé")
             onCancelReply()
         } catch (error) {
             console.error("Error sending voice message:", error)
