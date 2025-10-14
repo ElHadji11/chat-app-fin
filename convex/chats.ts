@@ -241,6 +241,16 @@ export const getMessages = query({
                 const sender = await ctx.db.get(msg.senderId);
                 const readByArray = msg.readBy || [];
 
+                // Convert storage ID to URL if needed
+                let mediaUrl = msg.mediaUrl;
+                if (mediaUrl && (msg.type === "audio" || msg.type === "video" || msg.type === "image" || msg.type === "file")) {
+                    // Check if it's a storage ID (starts with "kg")
+                    if (mediaUrl.startsWith("kg")) {
+                        const url = await ctx.storage.getUrl(mediaUrl as any);
+                        mediaUrl = url ?? undefined;
+                    }
+                }
+
                 let replyToMessage = null;
                 if (msg.replyTo) {
                     const originalMessage = await ctx.db.get(msg.replyTo);
@@ -268,7 +278,7 @@ export const getMessages = query({
                     creationTime: msg._creationTime,
                     isSent: true,
                     type: msg.type,
-                    mediaUrl: msg.mediaUrl,
+                    mediaUrl: mediaUrl,
                     isMyMessage: msg.senderId === user._id,
                     isDelivered: true,
                     isRead: readByArray.includes(otherParticipantId),
