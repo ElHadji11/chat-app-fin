@@ -398,7 +398,7 @@ export default function ChatForm({
                 onTypingStop()
             }
         }
-    }, [onDraftUpdate, onTypingStart, onTypingStop])
+    }, [onDraftUpdate, onTypingStart, onTypingStop, watch])
 
     return (
         <div className="border-t border-border bg-card">

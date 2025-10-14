@@ -1,12 +1,8 @@
 "use client"
 
-import { Id } from "../../../../convex/_generated/dataModel"
-
 import { Preloaded, usePreloadedQuery } from "convex/react"
 import { useEffect, useRef } from "react"
 import { api } from "../../../../convex/_generated/api";
-import { VoiceMessage } from "./voice-message";
-import { FileText } from "lucide-react";
 import { MessageBubble, Message as MessageType } from "./message-bubble";
 
 interface ChatListProps {
@@ -16,6 +12,7 @@ interface ChatListProps {
     onScrollToMessage: (messageId: string) => void;
     messageRefs: React.RefObject<Map<string, HTMLDivElement> | null>;
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
+    highlightedMessageId: string | null;
 }
 
 export default function ChatList({
@@ -25,13 +22,14 @@ export default function ChatList({
     onScrollToMessage,
     messageRefs,
     messagesEndRef,
+    highlightedMessageId,
 }: ChatListProps) {
     const messages = usePreloadedQuery(preloadedMessages)
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         messagesEndRef?.current?.scrollIntoView({ behavior: "smooth" })
-    }, [messages])
+    }, [messages, messagesEndRef])
 
     return (
         <div ref={containerRef}
@@ -71,6 +69,7 @@ export default function ChatList({
                     return (
                         <div
                             key={messageForBubble.id}
+                            className={`${messageForBubble.id === highlightedMessageId ? 'bg-blue-500/10 rounded-md' : ''}`}
                             ref={(el) => {
                                 if (el && messageRefs.current) messageRefs.current.set(messageForBubble.id, el);
                                 else messageRefs.current?.delete(messageForBubble.id);

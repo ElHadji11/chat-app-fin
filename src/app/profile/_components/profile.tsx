@@ -1,7 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Preloaded, useMutation, usePreloadedQuery } from "convex/react"
-import { ArrowLeft, Camera, Edit2 } from "lucide-react"
+import { ArrowLeft, Camera } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -9,10 +9,7 @@ import { useForm } from "react-hook-form"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-// import { fetchMutation } from "convex/nextjs"
 import { api } from "../../../../convex/_generated/api"
-import { generateUploadUrl } from "../../../../convex/chats"
-import { PhoneNumber } from "@clerk/nextjs/server"
 
 
 interface ProfileFormData {

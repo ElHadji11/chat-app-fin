@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, type TouchEvent } from "react"
-import { CornerUpLeft, Mic, Video, FileText } from "lucide-react"
+import { CornerUpLeft, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuotedMessage } from "./quoted-message"
 import { VoiceMessage } from "./voice-message"

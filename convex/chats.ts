@@ -610,7 +610,6 @@ export const getConversationInfo = query({
         // ✅ Récupérer les utilisateurs qui tapent (sauf l'utilisateur actuel)
         const typingUserIds = (conversation.typing || []).filter(id => id !== user._id)
 
-        console.log("Typing users IDs:", typingUserIds)
 
         const typingUsers = await Promise.all(
             typingUserIds.map(async (userId) => {
@@ -619,7 +618,6 @@ export const getConversationInfo = query({
             })
         )
 
-        console.log("Typing users names:", typingUsers)
 
         return {
             id: conversation._id,
@@ -665,12 +663,10 @@ export const updateDraft = mutation({
             // Supprimer le draft
             if (existingDraft) {
                 await ctx.db.delete(existingDraft._id)
-                console.log("🗑️ Draft deleted")
             }
         } else if (existingDraft) {
             // Mettre à jour le draft existant
             await ctx.db.patch(existingDraft._id, { content })
-            console.log("✏️ Draft updated:", content.substring(0, 30))
         } else {
             // Créer un nouveau draft
             await ctx.db.insert("drafts", {
@@ -678,7 +674,6 @@ export const updateDraft = mutation({
                 conversationId,
                 content
             })
-            console.log("➕ Draft created:", content.substring(0, 30))
         }
     },
 })
@@ -711,7 +706,6 @@ export const startTyping = mutation({
             await ctx.db.patch(conversationId, {
                 typing: [...typing, user._id]
             })
-            console.log("✅ User started typing:", user.name)
         }
     },
 })
@@ -719,7 +713,7 @@ export const startTyping = mutation({
 export const stopTyping = mutation({
     args: {
         conversationId: v.id("conversations"),
-        userId: v.string() // ✅ Utilise clerkId (string)
+        userId: v.string()
     },
     handler: async (ctx, { conversationId, userId }) => {
         // Récupérer l'utilisateur par clerkId
@@ -738,7 +732,6 @@ export const stopTyping = mutation({
 
         const newTyping = conversation.typing.filter(id => id !== user._id)
         await ctx.db.patch(conversationId, { typing: newTyping })
-        console.log("✅ User stopped typing:", user.name)
     },
 })
 
@@ -749,7 +742,6 @@ export const getDraft = query({
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity()
         if (!identity) {
-            console.log("❌ No identity")
             return null
         }
 
@@ -759,7 +751,6 @@ export const getDraft = query({
             .unique()
 
         if (!user) {
-            console.log("❌ User not found")
             return null
         }
 
@@ -770,7 +761,6 @@ export const getDraft = query({
             )
             .unique()
 
-        console.log("📝 Draft found:", draft)
 
         return draft ? { content: draft.content } : null
     }

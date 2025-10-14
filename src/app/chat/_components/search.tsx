@@ -14,7 +14,7 @@ import { useMutation, useQuery } from "convex/react"
 import debounce from 'lodash/debounce'
 import { ArrowLeft, MessageSquareMore, Search, Users2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { api } from "../../../../convex/_generated/api"
 
 export default function SearchComponent({ onSidebar }: { onSidebar: boolean }) {
@@ -28,17 +28,16 @@ export default function SearchComponent({ onSidebar }: { onSidebar: boolean }) {
     // const createConversation = useMutation(api.chats.createOrGetConversation)
     const createDraft = useMutation(api.chats.createDraftConversation)
 
-    const debouncedSearch = useCallback(
+    const debouncedSearch = useMemo(
         // Debounce function that delays executing the search
-        debounce((term: string) => {
+        () => debounce((term: string) => {
             // startTransition allows React to prioritize urgent updates
             startTransition(() => {
                 // Update the search term after a delay
                 setDebouncedTerm(term)
             })
         }, 300),
-        [],
-    )
+        [])
 
     const searchResults = useQuery(api.users.searchUsers, {
         searchTerm: debouncedTerm,

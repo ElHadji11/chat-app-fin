@@ -17,13 +17,13 @@ export default async function Conversations({
         redirect(`/sign-in`)
     }
 
-    const preloadedConversationInfo = await preloadQuery(
-        api.chats.getConversationInfo,
-        {
-            conversationId: conversationId as Id<"conversations">,
-            userId
-        }
-    )
+    // const preloadedConversationInfo = await preloadQuery(
+    //     api.chats.getConversationInfo,
+    //     {
+    //         conversationId: conversationId as Id<"conversations">,
+    //         userId
+    //     }
+    // )
 
     const preloadedMessages = await preloadQuery(
         api.chats.getMessages,

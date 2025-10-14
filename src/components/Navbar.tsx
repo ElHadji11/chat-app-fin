@@ -1,7 +1,6 @@
 import React from 'react'
 import { SignedIn, SignedOut, SignInButton, SignOutButton, UserButton } from '@clerk/clerk-react'
 import { ModeToggle } from './ToggleTheme'
-import Link from 'next/link'
 
 const Navbar = () => {
     return (
@@ -16,7 +15,6 @@ const Navbar = () => {
                         <UserButton />
                         <SignOutButton />
                     </SignedIn>
-
                 </div>
             </div>
         </>

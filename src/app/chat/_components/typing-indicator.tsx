@@ -8,12 +8,12 @@ interface TypingIndicatorProps {
 }
 
 export function TypingIndicator({ userNames = [], isVisible }: TypingIndicatorProps) {
-    const displayText =
-        userNames.length === 0
-            ? "Someone is typing..."
-            : userNames.length === 1
-                ? `${userNames[0]} is typing...`
-                : "Multiple people are typing..."
+    // const displayText =
+    //     userNames.length === 0
+    //         ? "Someone is typing..."
+    //         : userNames.length === 1
+    //             ? `${userNames[0]} is typing...`
+    //             : "Multiple people are typing..."
 
     return (
         <AnimatePresence>

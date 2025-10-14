@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useMemo, useState, useEffect } from "react"
 import { api } from "../../../../convex/_generated/api"
 import SearchComponent from "./search"
+import { Id } from "../../../../convex/_generated/dataModel"
 
 interface SideBarProps {
     preloadedUserInfo: Preloaded<typeof api.users.readUser>
@@ -38,7 +39,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     useEffect(() => {
         if (currentConversationId && userId) {
             markAsRead({
-                conversationId: currentConversationId as any,
+                conversationId: currentConversationId as Id<"conversations">,
                 userId: userId
             }).catch(console.error)
         }
@@ -136,8 +137,8 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                         size="sm"
                         onClick={() => setFilter('all')}
                         className={`flex-1 text-xs h-8 ${filter === 'all'
-                                ? "bg-[#00A884] text-white hover:bg-[#00A884]/90"
-                                : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
+                            ? "bg-[#00A884] text-white hover:bg-[#00A884]/90"
+                            : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
                             }`}
                     >
                         <Mail className="w-3 h-3 mr-1" />
@@ -149,8 +150,8 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                         size="sm"
                         onClick={() => setFilter('unread')}
                         className={`flex-1 text-xs h-8 relative ${filter === 'unread'
-                                ? "bg-blue-500 text-white hover:bg-blue-600"
-                                : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#2A3942]"
                             }`}
                     >
                         <Mail className="w-3 h-3 mr-1" />

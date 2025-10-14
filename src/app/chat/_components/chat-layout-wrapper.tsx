@@ -1,7 +1,7 @@
 "use client"
 import LoadingState from "@/components/loading";
 import { useAuth } from "@clerk/nextjs";
-import { Preloaded, useMutation, usePreloadedQuery, useQuery } from "convex/react";
+import { Preloaded, usePreloadedQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import Header from "./header";
 import Sidebar from "./sidebar";
