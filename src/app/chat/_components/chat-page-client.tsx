@@ -125,7 +125,7 @@ export default function ChatPageClient({
 
                 {/* ✅ Indicateur de frappe */}
                 <TypingIndicator
-                    userNames={typingUsers}
+                    // userNames={typingUsers}
                     isVisible={isOtherUserTyping}
                 />
 

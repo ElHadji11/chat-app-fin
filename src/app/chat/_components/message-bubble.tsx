@@ -5,6 +5,7 @@ import { CornerUpLeft, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuotedMessage } from "./quoted-message"
 import { VoiceMessage } from "./voice-message"
+import Image from "next/image"
 
 export interface Message {
     id: string
@@ -90,8 +91,8 @@ export function MessageBubble({ message, onReply, onQuoteClick }: MessageBubbleP
 
             case "image":
                 return (
-                    <img
-                        src={message.mediaUrl}
+                    <Image
+                        src={message.mediaUrl!}
                         alt="Image"
                         className="w-full max-w-xs object-cover rounded-lg"
                     />
