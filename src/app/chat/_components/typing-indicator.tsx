@@ -3,11 +3,13 @@
 import { motion, AnimatePresence } from "framer-motion"
 
 interface TypingIndicatorProps {
-    userNames?: string[]
+    // userNames?: string[]
     isVisible: boolean
 }
 
-export function TypingIndicator({ userNames = [], isVisible }: TypingIndicatorProps) {
+export function TypingIndicator({
+    //  userNames = [],
+    isVisible }: TypingIndicatorProps) {
     // const displayText =
     //     userNames.length === 0
     //         ? "Someone is typing..."
