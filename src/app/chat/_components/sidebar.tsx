@@ -86,7 +86,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     const unreadChatsCount = conversations?.filter(chat => chat.unread > 0).length || 0
 
     return (
-        <div className="w-[70px] md:w-[380px] lg:w-1/4 h-screen flex flex-col bg-background dark:bg-[#111B21] border-r border-border dark:border-[#313D45]">
+        <div className="w-[70px] md:w-[380px] lg:w-1/4 flex flex-col bg-background dark:bg-[#111B21] border-r border-border dark:border-[#313D45]">
             {/* Header */}
             <div className="px-3 py-[14px] bg-muted dark:bg-[#202C33] flex justify-center md:justify-between items-center">
                 <div className="relative">
@@ -192,7 +192,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
                     filteredConversations.map((chat) => {
                         const isCurrentChat = pathname.split("/")?.[2] === chat?.id
                         const hasUnread = chat.unread > 0 && !isCurrentChat
-                        const hasDraft = chat.hasDraft // ✅ Vérifier si un draft existe
+                        const hasDraft = chat.hasDraft && !isCurrentChat
 
                         return (
                             <Link href={`/chat/${chat.id}`} key={chat.id}>
