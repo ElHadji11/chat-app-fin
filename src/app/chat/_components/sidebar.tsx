@@ -88,7 +88,7 @@ export default function Sidebar({ preloadedUserInfo, preloadedConversations }: S
     return (
         <div className="w-[70px] md:w-[380px] lg:w-1/4 h-screen flex flex-col bg-background dark:bg-[#111B21] border-r border-border dark:border-[#313D45]">
             {/* Header */}
-            <div className="shrink-0 px-3 py-[18px] md:py-[14px] bg-muted dark:bg-[#202C33] flex justify-center md:justify-between items-center">
+            <div className="px-3 py-[14px] bg-muted dark:bg-[#202C33] flex justify-center md:justify-between items-center">
                 <div className="relative">
                     <Link href="/profile">
                         <Avatar>
